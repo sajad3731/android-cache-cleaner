@@ -15,6 +15,10 @@ The app targets Android 16 (API 36) and supports Android 6.0 (API 23) and newer.
 
 This starter documents its behavior but is not a Google Play approval or policy review. The publisher must complete the Play listing and any applicable declarations before publishing.
 
+## Privacy policy
+
+The [privacy policy](PRIVACY.md) is also available at [https://github.com/sajad3731/android-cache-cleaner/blob/main/PRIVACY.md](https://github.com/sajad3731/android-cache-cleaner/blob/main/PRIVACY.md). Enter this public URL in the Play Console and complete the Data safety section based on the exact version submitted.
+
 ## Build and run
 
 Open the project in a current Android Studio with the Android 16 (API 36) SDK installed, then run the `app` configuration on a device or emulator. You can also build a debug APK with:

@@ -5,6 +5,13 @@
     <string name="cache_size">This app's cache: %1$s</string>
     <string name="clear_own_cache">Clear this app's cache</string>
     <string name="open_settings">Open app storage settings</string>
+    <string name="privacy_policy">Privacy policy</string>
+    <string name="privacy_policy_title">Privacy policy</string>
+    <string name="privacy_policy_content">Cache Cleaner does not collect, transmit, or share personal data. It has no account, advertising, analytics, tracking, third-party SDKs, or internet permission.\n\nCache size checks and cache deletion happen locally on the device and are limited to Cache Cleaner&apos;s own app-specific cache directories. The app does not access or clear other apps&apos; data. It does not store or transmit the displayed cache size, usage information, or diagnostics.</string>
+    <string name="view_online_policy">View online policy</string>
+    <string name="close">Close</string>
+    <string name="privacy_policy_url">https://github.com/sajad3731/android-cache-cleaner/blob/main/PRIVACY.md</string>
+    <string name="privacy_link_unavailable">Could not open the online privacy policy.</string>
     <string name="cache_cleared">This app's cache was cleared.</string>
     <string name="cache_clear_incomplete">Some cache files could not be removed.</string>
     <string name="settings_unavailable">Could not open app storage settings.</string>

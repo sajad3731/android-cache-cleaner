@@ -1,6 +1,7 @@
 package com.example.cachecleaner
 
 import android.app.Activity
+import android.app.AlertDialog
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
@@ -25,6 +26,9 @@ class MainActivity : Activity() {
         }
         findViewById<Button>(R.id.settingsButton).setOnClickListener {
             openStorageSettings()
+        }
+        findViewById<Button>(R.id.privacyPolicyButton).setOnClickListener {
+            showPrivacyPolicy()
         }
         updateCacheSize()
     }
@@ -55,6 +59,26 @@ class MainActivity : Activity() {
         } catch (_: ActivityNotFoundException) {
             status.setText(R.string.settings_unavailable)
         }
+    }
+
+    private fun showPrivacyPolicy() {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.privacy_policy_title)
+            .setMessage(R.string.privacy_policy_content)
+            .setPositiveButton(R.string.close, null)
+            .setNeutralButton(R.string.view_online_policy) { _, _ ->
+                try {
+                    startActivity(
+                        Intent(
+                            Intent.ACTION_VIEW,
+                            Uri.parse(getString(R.string.privacy_policy_url))
+                        )
+                    )
+                } catch (_: ActivityNotFoundException) {
+                    status.setText(R.string.privacy_link_unavailable)
+                }
+            }
+            .show()
     }
 
     private fun updateCacheSize() {
