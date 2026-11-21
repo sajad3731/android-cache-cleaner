@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">Cache Cleaner</string>
+    <string name="title">Manage app cache</string>
+    <string name="description">Android protects other apps' data. You can clear this app's cache here, or open system settings to manage storage for an app.</string>
+    <string name="cache_size">This app's cache: %1$s</string>
+    <string name="clear_own_cache">Clear this app's cache</string>
+    <string name="open_settings">Open app storage settings</string>
+    <string name="cache_cleared">This app's cache was cleared.</string>
+    <string name="cache_clear_incomplete">Some cache files could not be removed.</string>
+    <string name="settings_unavailable">Could not open app storage settings.</string>
+</resources>
