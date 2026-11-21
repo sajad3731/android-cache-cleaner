@@ -1,10 +1,10 @@
 <resources>
     <string name="app_name">Cache Cleaner</string>
     <string name="title">Manage app cache</string>
-    <string name="description">Android protects other apps' data. You can clear this app's cache here, or open system settings to manage storage for an app.</string>
+    <string name="description">Android protects other apps' data. You can clear this app's cache here. To clear another app's cache, go to Android Settings &gt; Apps &gt; [app] &gt; Storage and use its Clear cache control. Labels may vary by device.</string>
     <string name="cache_size">This app's cache: %1$s</string>
     <string name="clear_own_cache">Clear this app's cache</string>
-    <string name="open_settings">Open app storage settings</string>
+    <string name="open_settings">This app's settings</string>
     <string name="privacy_policy">Privacy policy</string>
     <string name="privacy_policy_title">Privacy policy</string>
     <string name="privacy_policy_content">Cache Cleaner does not collect, transmit, or share personal data. It has no account, advertising, analytics, tracking, third-party SDKs, or internet permission.\n\nCache size checks and cache deletion happen locally on the device and are limited to Cache Cleaner&apos;s own app-specific cache directories. The app does not access or clear other apps&apos; data. It does not store or transmit the displayed cache size, usage information, or diagnostics.</string>

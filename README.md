@@ -5,9 +5,9 @@ A small Android app that helps you manage storage safely.
 ## What it can do
 
 - Show and clear this app's own cache.
-- Open Android's settings page for this app, where Android provides storage controls.
+- Open this app's Android settings page.
 
-Android does not let ordinary third-party apps silently clear the caches of other apps. This app does not claim to perform a system-wide cleanup and does not request broad storage permissions. To clear another app's cache, open that app's storage settings and use the controls provided by your device.
+Android does not let ordinary third-party apps silently clear the caches of other apps. This app does not claim to perform a system-wide cleanup and does not request broad storage permissions. To clear another app's cache, navigate to Android Settings > Apps > [app] > Storage and use that app's Clear cache control; labels vary by device.
 
 ## Android and Google Play
 
