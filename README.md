@@ -9,9 +9,15 @@ A small Android app that helps you manage storage safely.
 
 Android does not let ordinary third-party apps silently clear the caches of other apps. This app does not claim to perform a system-wide cleanup and does not request broad storage permissions. To clear another app's cache, open that app's storage settings and use the controls provided by your device.
 
+## Android and Google Play
+
+The app targets Android 16 (API 36) and supports Android 6.0 (API 23) and newer. It does not use an Accessibility service, device-admin access, or broad storage permissions, and it does not automate Settings. Clearing another app's cache remains a user action in Android Settings.
+
+This starter documents its behavior but is not a Google Play approval or policy review. The publisher must complete the Play listing and any applicable declarations before publishing.
+
 ## Build and run
 
-Open the project in Android Studio and run the `app` configuration on a device or emulator (Android 6.0 / API 23 or newer). You can also build a debug APK with:
+Open the project in a current Android Studio with the Android 16 (API 36) SDK installed, then run the `app` configuration on a device or emulator. You can also build a debug APK with:
 
 ```sh
 ./gradlew assembleDebug
