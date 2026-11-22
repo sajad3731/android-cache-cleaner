@@ -66,6 +66,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
             android:accessibilityLiveRegion="polite"
+            android:freezesText="true"
             android:textColor="#176B5B"
             android:textSize="14sp" />
     </LinearLayout>
