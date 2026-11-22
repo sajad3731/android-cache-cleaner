@@ -19,7 +19,7 @@ android {
 
     defaultConfig {
         applicationId = "io.github.sajad3731.cachecleaner"
-        minSdk = 23
+        minSdk = 26
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
@@ -40,9 +40,14 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             signingConfig = signingConfigs.findByName("release")
         }
+    }
+
+    buildFeatures {
+        // IShellService: the app's link to the process Shizuku runs for it.
+        aidl = true
     }
 
     compileOptions {
@@ -58,5 +63,9 @@ kotlin {
 }
 
 dependencies {
-    testImplementation("junit:junit:4.13.2")
+    // Material 3 components, dynamic color and the DayNight theme.
+    implementation("com.google.android.material:material:1.14.0")
+    // Shizuku runs a helper process as shell (or root), which may trim every app's cache.
+    implementation("dev.rikka.shizuku:api:13.1.5")
+    implementation("dev.rikka.shizuku:provider:13.1.5")
 }

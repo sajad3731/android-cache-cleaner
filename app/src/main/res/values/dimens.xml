@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Segmented list: large corners at the ends, small ones between rows. -->
+    <dimen name="list_corner_outer">24dp</dimen>
+    <dimen name="list_corner_inner">6dp</dimen>
+</resources>
