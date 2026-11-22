@@ -4,7 +4,7 @@
         <item name="android:colorAccent">#176B5B</item>
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:statusBarColor">#F5F7F6</item>
-        <item name="android:navigationBarColor">#F5F7F6</item>
+        <!-- Dark icons on the navigation bar need API 27; keep the default dark bar before that. -->
         <item name="android:windowBackground">#F5F7F6</item>
     </style>
 </resources>
