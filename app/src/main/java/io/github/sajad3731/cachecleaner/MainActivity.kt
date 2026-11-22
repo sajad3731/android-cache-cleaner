@@ -1,4 +1,4 @@
-package com.example.cachecleaner
+package io.github.sajad3731.cachecleaner
 
 import android.app.Activity
 import android.app.AlertDialog
