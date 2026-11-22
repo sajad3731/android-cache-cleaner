@@ -35,3 +35,29 @@ Run the unit tests (cache size and delete logic, including symlink safety) with:
 ./gradlew testDebugUnitTest
 ```
 
+## Release build
+
+Release signing reads `keystore.properties` at the project root. It and any `*.jks` / `*.keystore` file are git-ignored; keep them and their passwords backed up outside the repo, since an upload key cannot be recovered.
+
+Create an upload keystore once:
+
+```sh
+keytool -genkeypair -v -keystore upload.jks -alias upload -keyalg RSA -keysize 2048 -validity 10000
+```
+
+Then create `keystore.properties`:
+
+```properties
+storeFile=upload.jks
+storePassword=...
+keyAlias=upload
+keyPassword=...
+```
+
+Build the Play bundle with:
+
+```sh
+./gradlew bundleRelease
+```
+
+The bundle is written to `app/build/outputs/bundle/release/app-release.aab`. Without `keystore.properties` the bundle is built unsigned.
