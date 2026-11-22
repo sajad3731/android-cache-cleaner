@@ -24,6 +24,7 @@ class MainActivity : Activity() {
     // File I/O stays off the main thread: a large cache can take long enough to walk or delete
     // to freeze the UI. A single thread also keeps size checks and deletion from overlapping.
     private val io: ExecutorService = Executors.newSingleThreadExecutor()
+    private val cacheFiles = CacheFiles(::isSymlink)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -58,18 +59,11 @@ class MainActivity : Activity() {
         clearCacheButton.isEnabled = false
         runInBackground(
             work = {
-                var cleared = true
-                cacheDirectories().forEach { directory ->
-                    val entries = directory.listFiles()
-                    if (entries == null) {
-                        cleared = false
-                    } else {
-                        entries.forEach { entry ->
-                            if (!deleteRecursively(entry)) cleared = false
-                        }
-                    }
-                }
-                cleared to cacheDirectories().sumOf(::directorySize)
+                // No short-circuit: every directory gets cleared even after one fails.
+                val cleared = cacheDirectories()
+                    .map(cacheFiles::clearContents)
+                    .all { it }
+                cleared to cacheDirectories().sumOf(cacheFiles::size)
             },
             onResult = { (cleared, size) ->
                 status.setText(if (cleared) R.string.cache_cleared else R.string.cache_clear_incomplete)
@@ -113,7 +107,7 @@ class MainActivity : Activity() {
 
     private fun updateCacheSize() {
         runInBackground(
-            work = { cacheDirectories().sumOf(::directorySize) },
+            work = { cacheDirectories().sumOf(cacheFiles::size) },
             onResult = ::showCacheSize
         )
     }
@@ -134,30 +128,6 @@ class MainActivity : Activity() {
 
     private fun cacheDirectories(): List<File> =
         (listOf(cacheDir) + externalCacheDirs.filterNotNull()).distinct()
-
-    private fun directorySize(file: File): Long {
-        // Symbolic links are not followed: their targets live outside the cache, and a link cycle
-        // would recurse forever.
-        if (isSymlink(file)) return 0L
-        if (file.isFile) return file.length()
-        return file.listFiles()?.sumOf(::directorySize) ?: 0L
-    }
-
-    private fun deleteRecursively(file: File): Boolean {
-        // Remove a symbolic link itself, never what it points to, so deletion cannot reach
-        // files outside this app's cache. This also removes dangling links, which exists() misses.
-        if (isSymlink(file)) return file.delete()
-        if (!file.exists()) return true
-        if (file.isDirectory) {
-            val children = file.listFiles() ?: return false
-            var deleted = true
-            children.forEach { child ->
-                if (!deleteRecursively(child)) deleted = false
-            }
-            if (!deleted) return false
-        }
-        return file.delete()
-    }
 
     private fun isSymlink(file: File): Boolean =
         try {

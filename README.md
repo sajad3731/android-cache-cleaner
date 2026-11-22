@@ -28,3 +28,10 @@ Open the project in a current Android Studio with the Android 16 (API 36) SDK in
 ```
 
 The APK is written to `app/build/outputs/apk/debug/app-debug.apk`.
+
+Run the unit tests (cache size and delete logic, including symlink safety) with:
+
+```sh
+./gradlew testDebugUnitTest
+```
+
