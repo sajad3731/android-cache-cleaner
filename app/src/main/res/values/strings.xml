@@ -27,6 +27,11 @@
     <string name="close">Close</string>
     <string name="privacy_policy_url" translatable="false">https://github.com/sajad3731/android-cache-cleaner/blob/main/PRIVACY.md</string>
     <string name="privacy_link_unavailable">Could not open the online privacy policy.</string>
+    <plurals name="scan_hidden">
+        <item quantity="one">%1$d app with less than %2$s is not shown.</item>
+        <item quantity="other">%1$d apps with less than %2$s are not shown.</item>
+    </plurals>
+    <string name="nothing_over_limit">No app holds %1$s of cache or more. Smaller caches are set to be skipped in Advanced.</string>
     <plurals name="scan_summary">
         <item quantity="one">of cache found in %1$d app.</item>
         <item quantity="other">of cache found in %1$d apps.</item>

@@ -28,9 +28,13 @@ class Prefs(context: Context) {
         get() = prefs.getStringSet(KEY_EXCLUDED, emptySet())!!.toSet()
         set(value) = prefs.edit().putStringSet(KEY_EXCLUDED, value).apply()
 
-    /** Clean all skips smaller caches. 0 cleans every app that holds any cache. */
+    /**
+     * Clean all skips smaller caches, and the main list hides them. 0 cleans every app that
+     * holds any cache. Each app costs the same time however small its cache, so 1 MB by default.
+     */
     var minCleanBytes: Long
-        get() = prefs.getLong(KEY_MIN_BYTES, DEFAULT_MIN_BYTES)
+        // Whole MB; older versions stored 1024-based sizes (10 MiB), read as the same MB.
+        get() = prefs.getLong(KEY_MIN_BYTES, DEFAULT_MIN_BYTES) / MB * MB
         set(value) = prefs.edit().putLong(KEY_MIN_BYTES, value).apply()
 
     var schedule: Schedule
@@ -95,7 +99,12 @@ class Prefs(context: Context) {
         enumValues<T>().firstOrNull { it.name == name } ?: fallback
 
     companion object {
-        const val DEFAULT_MIN_BYTES = 0L
+        /** Android's Formatter counts in 1000s since 8.0; the size limit matches the sizes shown. */
+        const val MB = 1_000_000L
+        const val DEFAULT_MIN_BYTES = MB
+
+        /** The size limit slider goes up to this many MB, in 1 MB steps. */
+        const val MAX_MIN_MB = 50
         private const val MAX_HISTORY = 30
         private const val KEY_EXCLUDED = "excluded"
         private const val KEY_MIN_BYTES = "min_clean_bytes"

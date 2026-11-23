@@ -26,6 +26,11 @@
     <string name="view_online_policy">مشاهده نسخه آنلاین</string>
     <string name="close">بستن</string>
     <string name="privacy_link_unavailable">نسخه آنلاین سیاست حریم خصوصی باز نشد.</string>
+    <plurals name="scan_hidden">
+        <item quantity="one">%1$d برنامه با کمتر از %2$s نشان داده نمی‌شود.</item>
+        <item quantity="other">%1$d برنامه با کمتر از %2$s نشان داده نمی‌شوند.</item>
+    </plurals>
+    <string name="nothing_over_limit">هیچ برنامه‌ای %1$s حافظه پنهان یا بیشتر ندارد. در «پیشرفته» تنظیم شده که حافظه‌های کوچک‌تر رد شوند.</string>
     <plurals name="scan_summary">
         <item quantity="one">حافظه پنهان در %1$d برنامه پیدا شد.</item>
         <item quantity="other">حافظه پنهان در %1$d برنامه پیدا شد.</item>

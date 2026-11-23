@@ -17,11 +17,10 @@ import androidx.core.content.ContextCompat
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.button.MaterialButtonToggleGroup
-import com.google.android.material.chip.Chip
-import com.google.android.material.chip.ChipGroup
 import com.google.android.material.color.DynamicColors
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.materialswitch.MaterialSwitch
+import com.google.android.material.slider.Slider
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
@@ -136,22 +135,20 @@ class AdvancedActivity : ThemedActivity() {
         }
     }
 
+    /** 0 to 50 MB in 1 MB steps; 0 cleans every size. */
     private fun setUpMinSize() {
-        val options = listOf(
-            R.id.minSizeAny to 0L,
-            R.id.minSize1 to (1L shl 20),
-            R.id.minSize10 to (10L shl 20),
-            R.id.minSize50 to (50L shl 20),
-        )
-        findViewById<Chip>(R.id.minSizeAny).setText(R.string.min_size_any)
-        findViewById<Chip>(R.id.minSize1).text = getString(R.string.min_size_mb, 1)
-        findViewById<Chip>(R.id.minSize10).text = getString(R.string.min_size_mb, 10)
-        findViewById<Chip>(R.id.minSize50).text = getString(R.string.min_size_mb, 50)
-        val group = findViewById<ChipGroup>(R.id.minSizeGroup)
-        val current = prefs.minCleanBytes
-        group.check(options.firstOrNull { it.second == current }?.first ?: R.id.minSizeAny)
-        group.setOnCheckedStateChangeListener { _, ids ->
-            options.firstOrNull { it.first == ids.firstOrNull() }?.let { prefs.minCleanBytes = it.second }
+        val value = findViewById<TextView>(R.id.minSizeValue)
+        fun describe(mb: Int) = if (mb == 0) getString(R.string.min_size_any) else getString(R.string.min_size_mb, mb)
+        val current = (prefs.minCleanBytes / Prefs.MB).toInt().coerceIn(0, Prefs.MAX_MIN_MB)
+        value.text = describe(current)
+        findViewById<Slider>(R.id.minSizeSlider).apply {
+            valueTo = Prefs.MAX_MIN_MB.toFloat()
+            this.value = current.toFloat()
+            setLabelFormatter { describe(it.toInt()) }
+            addOnChangeListener { _, mb, _ ->
+                value.text = describe(mb.toInt())
+                prefs.minCleanBytes = mb.toLong() * Prefs.MB
+            }
         }
     }
 

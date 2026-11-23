@@ -1,6 +1,7 @@
 package io.github.sajad3731.cachecleaner
 
 import android.accessibilityservice.AccessibilityService
+import android.app.KeyguardManager
 import android.content.ActivityNotFoundException
 import android.content.BroadcastReceiver
 import android.content.ComponentName
@@ -48,7 +49,10 @@ class CacheCleanerService : AccessibilityService() {
         STORAGE,
         /** Xiaomi: the menu that opens from App info's bottom button, holding Clear cache. */
         CHOOSER,
-        /** Clear cache pressed: confirm a "Clear cache?" dialog if any, then wait for the button to go grey. */
+        /**
+         * Clear cache pressed. Settings clears in the background once pressed, so this only
+         * waits a moment for a "Clear cache?" dialog to confirm, then moves on.
+         */
         CLEARING,
     }
 
@@ -78,6 +82,17 @@ class CacheCleanerService : AccessibilityService() {
     private var clearDataLabels: Set<String> = emptySet()
 
     private var overlay: View? = null
+
+    /** The screen went off mid-run: the current app starts over once the phone is unlocked. */
+    private var paused = false
+    private var pausedAt = 0L
+    private var runStartedAt = 0L
+
+    /**
+     * Set once an app in this run cleared with no "Clear cache?" dialog: this Settings asks for
+     * no confirmation, so later apps move on right after the press.
+     */
+    private var noConfirmDialog = false
     private var useDirectStorage = false
     private var startedDirect = false
     private var directFailures = 0
@@ -105,7 +120,7 @@ class CacheCleanerService : AccessibilityService() {
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         // Nothing is read unless a cleaning is running; then only Settings screens matter.
-        if (!isRunning || event == null || event.packageName?.toString() !in watchedPackages) return
+        if (!isRunning || paused || event == null || event.packageName?.toString() !in watchedPackages) return
         if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) windowReady = true
         scheduleTick(EVENT_DEBOUNCE_MS)
     }
@@ -121,16 +136,55 @@ class CacheCleanerService : AccessibilityService() {
         total = targets.size
         processed = 0
         cleaned = 0
+        paused = false
+        noConfirmDialog = false
+        runStartedAt = SystemClock.uptimeMillis()
         showOverlay()
-        // Behind the lock screen Settings cannot be worked; every app would only time out.
-        ContextCompat.registerReceiver(
-            this, screenOff, IntentFilter(Intent.ACTION_SCREEN_OFF), ContextCompat.RECEIVER_NOT_EXPORTED
-        )
+        // The overlay keeps the screen on, but the user may still lock the phone. Settings
+        // cannot be worked behind the lock screen, so the run waits for the unlock.
+        val filter = IntentFilter().apply {
+            addAction(Intent.ACTION_SCREEN_OFF)
+            addAction(Intent.ACTION_SCREEN_ON)
+            addAction(Intent.ACTION_USER_PRESENT)
+        }
+        ContextCompat.registerReceiver(this, screenState, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
         next()
     }
 
-    private val screenOff = object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) = finish(stopped = true)
+    private val screenState = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            when (intent.action) {
+                Intent.ACTION_SCREEN_OFF -> pause()
+                Intent.ACTION_USER_PRESENT -> resume()
+                // Without a lock screen, no USER_PRESENT may follow.
+                Intent.ACTION_SCREEN_ON ->
+                    if (!getSystemService(KeyguardManager::class.java).isKeyguardLocked) resume()
+            }
+        }
+    }
+
+    private fun pause() {
+        if (!isRunning || paused) return
+        paused = true
+        pausedAt = SystemClock.uptimeMillis()
+        handler.removeCallbacksAndMessages(null)
+        // The app being cleaned starts over after the unlock, without using up its retry.
+        current?.let { queue.addFirst(it) }
+        current = null
+        // The overlay would sit over the lock screen and block unlocking.
+        hideOverlay()
+    }
+
+    private fun resume() {
+        if (!isRunning || !paused) return
+        paused = false
+        // Long after the lock, Settings suddenly taking over the screen would surprise the user.
+        if (SystemClock.uptimeMillis() - pausedAt > MAX_PAUSE_MS) {
+            finish(stopped = true)
+            return
+        }
+        showOverlay()
+        next()
     }
 
     private fun next() {
@@ -256,7 +310,8 @@ class CacheCleanerService : AccessibilityService() {
             if (SystemClock.uptimeMillis() - stepStartedAt >= LOAD_WAIT_MS) done(target, "already empty")
             return
         }
-        if (button.performAction(AccessibilityNodeInfo.ACTION_CLICK)) enterStep(Step.CLEARING, expectNewWindow = false)
+        if (!button.performAction(AccessibilityNodeInfo.ACTION_CLICK)) return
+        if (noConfirmDialog) done(target, "pressed") else enterStep(Step.CLEARING, expectNewWindow = false)
     }
 
     private fun onChooser(root: AccessibilityNodeInfo) {
@@ -269,15 +324,18 @@ class CacheCleanerService : AccessibilityService() {
     private fun onClearing(root: AccessibilityNodeInfo, target: CleanTarget) {
         val now = SystemClock.uptimeMillis()
         confirmButton(root)?.let { ok ->
-            if (ok.performAction(AccessibilityNodeInfo.ACTION_CLICK)) lastActionAt = now
+            if (ok.performAction(AccessibilityNodeInfo.ACTION_CLICK)) done(target, "confirmed")
             return
         }
+        // Pressing Clear cache hands the job to Android, which finishes it even after Settings
+        // is replaced by the next app. Only a confirmation dialog is worth a short wait.
         val button = findClearCacheButton(root)
-        // Grey again: Settings has cleared it. Some caches never reach zero (open files of a
-        // running app), so move on after a short wait either way.
         when {
-            button != null && !button.isEnabled -> done(target, "button grey")
-            now - lastActionAt >= AFTER_CLEAR_MAX_MS -> done(target, "wait over")
+            button != null && !button.isEnabled -> {
+                noConfirmDialog = true
+                done(target, "button grey")
+            }
+            now - lastActionAt >= DIALOG_WAIT_MS -> done(target, "pressed")
         }
     }
 
@@ -486,7 +544,9 @@ class CacheCleanerService : AccessibilityService() {
             WindowManager.LayoutParams.MATCH_PARENT,
             WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
             // Not focusable, so Settings stays the active window the service works on.
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+            // Kept on, so the phone does not lock itself halfway through.
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON,
             PixelFormat.TRANSLUCENT
         )
         getSystemService(WindowManager::class.java).addView(view, params)
@@ -522,8 +582,12 @@ class CacheCleanerService : AccessibilityService() {
         current = null
         queue.clear()
         retryQueue.clear()
-        runCatching { unregisterReceiver(screenOff) }
+        runCatching { unregisterReceiver(screenState) }
+        paused = false
         hideOverlay()
+        if (debuggable) {
+            Log.d(TAG, "run: $cleaned cleaned of $total in ${SystemClock.uptimeMillis() - runStartedAt} ms")
+        }
         startActivity(
             Intent(this, MainActivity::class.java)
                 .addFlags(
@@ -583,11 +647,13 @@ class CacheCleanerService : AccessibilityService() {
         )
         private val FALLBACK_XIAOMI_MENU_LABELS = listOf("Clear data", "پاک کردن داده‌ها")
 
-        private const val POLL_MS = 150L
+        private const val POLL_MS = 100L
         private const val EVENT_DEBOUNCE_MS = 40L
         private const val WINDOW_FALLBACK_MS = 500L
         private const val LOAD_WAIT_MS = 1_200L
-        private const val AFTER_CLEAR_MAX_MS = 700L
+        /** After Clear cache: how long a "Clear cache?" dialog may take to appear. */
+        private const val DIALOG_WAIT_MS = 300L
+        private const val MAX_PAUSE_MS = 10 * 60 * 1000L
         private const val STEP_TIMEOUT_MS = 4_000L
         private const val MAX_SCROLLS = 6
         private const val MAX_ANCESTOR_LEVELS = 3

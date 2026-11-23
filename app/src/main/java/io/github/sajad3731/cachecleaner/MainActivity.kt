@@ -196,20 +196,29 @@ class MainActivity : ThemedActivity() {
         lastResult = result
         scanProgress.visibility = View.GONE
         showReport(result)
-        adapter.submit(result.apps, prefs.excluded)
+        // Caches under the size limit are left out: Clean all skips them, so the list does too.
+        val shown = shownApps()
+        val hidden = result.apps.size - shown.size
+        val limit = getString(R.string.min_size_mb, (prefs.minCleanBytes / Prefs.MB).toInt())
+        adapter.submit(shown, prefs.excluded)
         primaryButton.isEnabled = true
-        listTitle.visibility = if (result.apps.isEmpty()) View.GONE else View.VISIBLE
-        if (result.apps.isEmpty()) {
+        listTitle.visibility = if (shown.isEmpty()) View.GONE else View.VISIBLE
+        if (shown.isEmpty()) {
             totalSize.visibility = View.GONE
-            summary.setText(R.string.nothing_found)
+            if (hidden > 0) summary.text = getString(R.string.nothing_over_limit, limit) else summary.setText(R.string.nothing_found)
             primaryButton.setText(R.string.rescan)
             primaryButton.icon = null
             primaryButton.setOnClickListener { setStatus(null); refresh() }
             return
         }
         totalSize.visibility = View.VISIBLE
-        totalSize.text = Formatter.formatFileSize(this, result.totalBytes)
-        summary.text = resources.getQuantityString(R.plurals.scan_summary, result.apps.size, result.apps.size)
+        totalSize.text = Formatter.formatFileSize(this, shown.sumOf { it.cacheBytes })
+        val found = resources.getQuantityString(R.plurals.scan_summary, shown.size, shown.size)
+        summary.text = if (hidden > 0) {
+            found + " " + resources.getQuantityString(R.plurals.scan_hidden, hidden, hidden, limit)
+        } else {
+            found
+        }
         primaryButton.setText(R.string.clean_all)
         primaryButton.setIconResource(R.drawable.ic_delete_sweep)
         primaryButton.setOnClickListener { cleanFromReminder = false; cleanAll() }
@@ -259,6 +268,12 @@ class MainActivity : ThemedActivity() {
         setStatus(text)
     }
 
+    /** Apps at or above the size limit; this app's own row too, when it holds that much. */
+    private fun shownApps(): List<AppCache> {
+        val minBytes = prefs.minCleanBytes
+        return lastResult.apps.filter { it.cacheBytes >= minBytes }
+    }
+
     private fun cleanAll() {
         val scan = lastResult
         val targets = CleanPlan.targets(this, prefs, scan).map { CleanTarget(it.packageName, it.label) }
@@ -280,7 +295,7 @@ class MainActivity : ThemedActivity() {
     private fun toggleSkipped(app: AppCache) {
         val skipped = prefs.toggleExcluded(app.packageName)
         setStatus(getString(if (skipped) R.string.skip_added else R.string.skip_removed, app.label))
-        adapter.submit(lastResult.apps, prefs.excluded)
+        adapter.submit(shownApps(), prefs.excluded)
     }
 
     private fun startCleaning(targets: List<CleanTarget>, includeSelf: Boolean, fallback: AppCache? = null) {

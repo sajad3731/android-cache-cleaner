@@ -163,38 +163,23 @@
                     android:layout_marginTop="0dp"
                     android:text="@string/min_size_label" />
 
-                <com.google.android.material.chip.ChipGroup
-                    android:id="@+id/minSizeGroup"
-                    android:layout_width="match_parent"
+                <TextView
+                    android:id="@+id/minSizeValue"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    app:selectionRequired="true"
-                    app:singleSelection="true">
+                    android:textAppearance="?attr/textAppearanceTitleMedium"
+                    android:textColor="?attr/colorPrimary" />
 
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/minSizeAny"
-                        style="@style/Widget.Material3.Chip.Filter"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content" />
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/minSize1"
-                        style="@style/Widget.Material3.Chip.Filter"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content" />
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/minSize10"
-                        style="@style/Widget.Material3.Chip.Filter"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content" />
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/minSize50"
-                        style="@style/Widget.Material3.Chip.Filter"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content" />
-                </com.google.android.material.chip.ChipGroup>
+                <!-- 0 to 50 MB in 1 MB steps; valueTo is set from Prefs.MAX_MIN_MB. -->
+                <com.google.android.material.slider.Slider
+                    android:id="@+id/minSizeSlider"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:contentDescription="@string/min_size_label"
+                    android:stepSize="1"
+                    android:valueFrom="0"
+                    android:valueTo="50" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/skipAppsButton"
