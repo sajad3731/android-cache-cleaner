@@ -1,8 +1,24 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 108 108">
-  <rect width="108" height="108" fill="#176B5B"/>
-  <g fill="#FFFFFF" fill-rule="evenodd" transform="translate(54 54) scale(1.12) translate(-54 -54)">
-    <path d="M46,30h10a2,2 0,0 1,2 2v4h11a2,2 0,0 1,2 2v2a2,2 0,0 1,-2 2H33a2,2 0,0 1,-2 -2v-2a2,2 0,0 1,2 -2h11v-4a2,2 0,0 1,2 -2z M47,33v3h8v-3z"/>
-    <path d="M35,45h32l-3,33a4,4 0,0 1,-4 3.6H42a4,4 0,0 1,-4 -3.6z M44,52h3v22h-3z M49.5,52h3v22h-3z M55,52h3v22h-3z"/>
-    <path d="M68,25l1.4,2.6l2.6,1.4l-2.6,1.4l-1.4,2.6l-1.4,-2.6l-2.6,-1.4l2.6,-1.4z"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="14 14 80 80">
+  <!-- Same drawing as the adaptive icon (108 canvas), cropped to the part launchers show. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#25947D"/>
+      <stop offset="1" stop-color="#0D4A3F"/>
+    </linearGradient>
+  </defs>
+  <rect width="108" height="108" fill="url(#bg)"/>
+  <g transform="translate(54 55) scale(0.86) translate(-54 -55)">
+    <!-- soft shadow -->
+    <ellipse cx="54" cy="83.5" rx="17" ry="2.6" fill="#000000" fill-opacity="0.18"/>
+    <!-- body with three slots -->
+    <path fill="#FFFFFF" fill-rule="evenodd" d="M36,47H72L69.3,77.2C69,80.5 66.6,82.5 63.4,82.5H44.6C41.4,82.5 39,80.5 38.7,77.2Z M45,55.5a1.75,1.75 0 0 1 3.5,0v19a1.75,1.75 0 0 1 -3.5,0z M52.25,55.5a1.75,1.75 0 0 1 3.5,0v19a1.75,1.75 0 0 1 -3.5,0z M59.5,55.5a1.75,1.75 0 0 1 3.5,0v19a1.75,1.75 0 0 1 -3.5,0z"/>
+    <!-- lid, lifted, hinged on the right -->
+    <g transform="rotate(12 75 43)">
+      <path fill="#FFFFFF" fill-rule="evenodd" d="M48,31h12a3,3 0 0 1 3,3v3h9a3,3 0 0 1 3,3v0a3,3 0 0 1 -3,3H36a3,3 0 0 1 -3,-3v0a3,3 0 0 1 3,-3h9v-3a3,3 0 0 1 3,-3z M49,34.5v2.5h10v-2.5z"/>
+    </g>
+    <!-- sparkles leaving the bin -->
+    <path fill="#FFD45C" d="M74,18C74.8,23.2 76.8,25.2 82,26C76.8,26.8 74.8,28.8 74,34C73.2,28.8 71.2,26.8 66,26C71.2,25.2 73.2,23.2 74,18Z"/>
+    <path fill="#A4F2DC" d="M83,38C83.4,40.6 84.4,41.6 87,42C84.4,42.4 83.4,43.4 83,46C82.6,43.4 81.6,42.4 79,42C81.6,41.6 82.6,40.6 83,38Z"/>
+    <circle cx="65" cy="19" r="1.6" fill="#A4F2DC"/>
   </g>
 </svg>
