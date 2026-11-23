@@ -16,11 +16,9 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
-import com.google.android.material.chip.Chip
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.progressindicator.LinearProgressIndicator
 import com.google.android.material.shape.ShapeAppearanceModel
-import rikka.shizuku.Shizuku
 import java.io.File
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -31,7 +29,6 @@ class MainActivity : ThemedActivity() {
     private lateinit var status: TextView
     private lateinit var listTitle: TextView
     private lateinit var scanProgress: LinearProgressIndicator
-    private lateinit var engineChip: Chip
     private lateinit var primaryButton: MaterialButton
 
     private lateinit var scanner: CacheScanner
@@ -41,12 +38,16 @@ class MainActivity : ThemedActivity() {
     // Scanning hundreds of packages takes long enough to freeze the UI, so it runs here.
     private val io: ExecutorService = Executors.newSingleThreadExecutor()
     private var scanning = false
-    private var cleaningSilently = false
+    // Set when the reminder notification opened the app: Clean all starts after the scan.
+    private var autoCleanAfterScan = false
+    private var cleanFromReminder = false
     private var lastResult = ScanResult(emptyList())
 
     // Cache total before a cleaning started, to report how much it freed after the rescan.
     private var bytesBeforeClean = -1L
     private var pendingReport: CleanReport? = null
+    // 1 when Clean all also emptied this app's own cache, which the service does not count.
+    private var selfCleaned = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -69,35 +70,63 @@ class MainActivity : ThemedActivity() {
         status = header.findViewById(R.id.status)
         listTitle = header.findViewById(R.id.listTitle)
         scanProgress = header.findViewById(R.id.scanProgress)
-        engineChip = header.findViewById(R.id.engineChip)
         primaryButton = header.findViewById(R.id.primaryButton)
-        engineChip.setOnClickListener { openAdvanced() }
+        header.findViewById<View>(R.id.junkCard).setOnClickListener {
+            startActivity(Intent(this, JunkActivity::class.java))
+        }
 
         adapter = AppCacheAdapter(header)
         list.adapter = adapter
 
-        Shizuku.addBinderReceivedListener(binderReceived)
-        if (savedInstanceState == null) takeReport(intent)
+        if (savedInstanceState == null) takeIntent(intent) else restoreState(savedInstanceState)
     }
 
-    // Shizuku may call this off the main thread.
-    private val binderReceived = Shizuku.OnBinderReceivedListener { runOnUiThread(::showEngine) }
+    // A rotation or theme change while the rescan runs must not lose the run's report or the
+    // reminder's request to clean.
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putBoolean(STATE_AUTO_CLEAN, autoCleanAfterScan)
+        outState.putBoolean(STATE_FROM_REMINDER, cleanFromReminder)
+        outState.putLong(STATE_BYTES_BEFORE, bytesBeforeClean)
+        outState.putInt(STATE_SELF_CLEANED, selfCleaned)
+        pendingReport?.let { report ->
+            outState.putInt(CacheCleanerService.EXTRA_CLEANED, report.cleaned)
+            outState.putStringArrayList(CacheCleanerService.EXTRA_FAILED_NAMES, ArrayList(report.failedNames))
+            outState.putBoolean(CacheCleanerService.EXTRA_STOPPED, report.stopped)
+            outState.putInt(CacheCleanerService.EXTRA_NOT_REACHED, report.notReached)
+        }
+    }
+
+    private fun restoreState(state: Bundle) {
+        autoCleanAfterScan = state.getBoolean(STATE_AUTO_CLEAN)
+        cleanFromReminder = state.getBoolean(STATE_FROM_REMINDER)
+        bytesBeforeClean = state.getLong(STATE_BYTES_BEFORE, -1L)
+        selfCleaned = state.getInt(STATE_SELF_CLEANED)
+        pendingReport = readReport(state)
+    }
+
+    private fun readReport(extras: Bundle): CleanReport? {
+        if (!extras.containsKey(CacheCleanerService.EXTRA_CLEANED)) return null
+        return CleanReport(
+            cleaned = extras.getInt(CacheCleanerService.EXTRA_CLEANED, 0),
+            failedNames = extras.getStringArrayList(CacheCleanerService.EXTRA_FAILED_NAMES).orEmpty(),
+            stopped = extras.getBoolean(CacheCleanerService.EXTRA_STOPPED, false),
+            notReached = extras.getInt(CacheCleanerService.EXTRA_NOT_REACHED, 0),
+        )
+    }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        takeReport(intent)
+        takeIntent(intent)
     }
 
     override fun onResume() {
         super.onResume()
-        ShizukuEngine.requestBinderIfMissing(this)
-        showEngine()
         // Permissions and cache sizes can both change while the user is in Settings.
         refresh()
     }
 
     override fun onDestroy() {
-        Shizuku.removeBinderReceivedListener(binderReceived)
         io.shutdownNow()
         super.onDestroy()
     }
@@ -111,26 +140,18 @@ class MainActivity : ThemedActivity() {
 
     private fun setStatus(resId: Int) = setStatus(getString(resId))
 
-    /** Shows which engine Clean all will use, so the Shizuku state is visible at a glance. */
-    private fun showEngine() {
-        val text = when {
-            !ShizukuEngine.isReady(this) -> R.string.engine_chip_accessibility
-            ShizukuEngine.isRoot() -> R.string.engine_chip_shizuku_root
-            // Trimming would clear a skipped app too, so Clean all falls back to Accessibility.
-            CleanPlan.skippedAppsHoldCache(prefs, lastResult) -> R.string.engine_chip_accessibility_skipped
-            else -> R.string.engine_chip_shizuku_adb
+    private fun takeIntent(intent: Intent?) {
+        if (intent == null) return
+        if (intent.getBooleanExtra(EXTRA_START_CLEAN, false)) {
+            // The user tapped the reminder: clean once the fresh scan is in.
+            intent.removeExtra(EXTRA_START_CLEAN)
+            ReminderJobService.cancel(this)
+            autoCleanAfterScan = true
+            cleanFromReminder = true
         }
-        engineChip.setText(text)
-    }
-
-    private fun takeReport(intent: Intent?) {
-        if (intent?.hasExtra(CacheCleanerService.EXTRA_CLEANED) != true) return
-        pendingReport = CleanReport(
-            cleaned = intent.getIntExtra(CacheCleanerService.EXTRA_CLEANED, 0),
-            failed = intent.getIntExtra(CacheCleanerService.EXTRA_FAILED, 0),
-            stopped = intent.getBooleanExtra(CacheCleanerService.EXTRA_STOPPED, false),
-            engine = Engine.ACCESSIBILITY,
-        )
+        val report = intent.extras?.let(::readReport) ?: return
+        pendingReport = report.copy(cleaned = report.cleaned + selfCleaned)
+        selfCleaned = 0
         intent.removeExtra(CacheCleanerService.EXTRA_CLEANED)
     }
 
@@ -139,7 +160,7 @@ class MainActivity : ThemedActivity() {
             showNeedsUsageAccess()
             return
         }
-        if (scanning || cleaningSilently || CacheCleanerService.instance?.isRunning == true) return
+        if (scanning || CacheCleanerService.instance?.isRunning == true) return
         scanning = true
         showBusy(getString(R.string.scanning))
         io.execute {
@@ -173,7 +194,6 @@ class MainActivity : ThemedActivity() {
 
     private fun showResult(result: ScanResult) {
         lastResult = result
-        showEngine()
         scanProgress.visibility = View.GONE
         showReport(result)
         adapter.submit(result.apps, prefs.excluded)
@@ -192,7 +212,11 @@ class MainActivity : ThemedActivity() {
         summary.text = resources.getQuantityString(R.plurals.scan_summary, result.apps.size, result.apps.size)
         primaryButton.setText(R.string.clean_all)
         primaryButton.setIconResource(R.drawable.ic_delete_sweep)
-        primaryButton.setOnClickListener { cleanAll() }
+        primaryButton.setOnClickListener { cleanFromReminder = false; cleanAll() }
+        if (autoCleanAfterScan) {
+            autoCleanAfterScan = false
+            cleanAll()
+        }
     }
 
     private fun showReport(result: ScanResult) {
@@ -209,30 +233,27 @@ class MainActivity : ThemedActivity() {
                 time = System.currentTimeMillis(),
                 freedBytes = freed ?: -1L,
                 apps = report.cleaned,
-                engine = report.engine,
-                scheduled = false,
-                outcome = when {
-                    report.failedToRun -> Outcome.FAILED
-                    report.stopped -> Outcome.STOPPED
-                    else -> Outcome.DONE
-                },
+                fromReminder = cleanFromReminder,
+                outcome = if (report.stopped) Outcome.STOPPED else Outcome.DONE,
             )
         )
-        if (report.failedToRun) {
-            setStatus(R.string.shizuku_failed)
-            return
-        }
+        cleanFromReminder = false
         val size = Formatter.formatFileSize(this, freed ?: 0L)
         val text = StringBuilder()
         text.append(
             when {
-                report.cleaned == HistoryEntry.ALL_APPS -> getString(R.string.report_freed_all, size)
                 freed != null -> resources.getQuantityString(R.plurals.report_freed, report.cleaned, size, report.cleaned)
                 else -> resources.getQuantityString(R.plurals.report_cleaned, report.cleaned, report.cleaned)
             }
         )
-        if (report.failed > 0) {
-            text.append(' ').append(resources.getQuantityString(R.plurals.report_failed, report.failed, report.failed))
+        val failed = report.failedNames
+        if (failed.isNotEmpty()) {
+            text.append(' ').append(
+                resources.getQuantityString(R.plurals.report_failed, failed.size, failed.size, failed.joinToString(getString(R.string.list_separator)))
+            )
+        }
+        if (report.notReached > 0) {
+            text.append(' ').append(resources.getQuantityString(R.plurals.report_not_reached, report.notReached, report.notReached))
         }
         if (report.stopped) text.append(' ').append(getString(R.string.report_stopped))
         setStatus(text)
@@ -240,10 +261,6 @@ class MainActivity : ThemedActivity() {
 
     private fun cleanAll() {
         val scan = lastResult
-        if (CleanPlan.canCleanSilently(this, prefs, scan)) {
-            cleanSilently { CleanPlan.cleanSilently(this, prefs, scan, ::showSilentProgress) }
-            return
-        }
         val targets = CleanPlan.targets(this, prefs, scan).map { CleanTarget(it.packageName, it.label) }
         startCleaning(targets, includeSelf = true)
     }
@@ -252,50 +269,18 @@ class MainActivity : ThemedActivity() {
         if (app.packageName == packageName) {
             bytesBeforeClean = lastResult.totalBytes
             clearOwnCache()
-            pendingReport = CleanReport(cleaned = 1, failed = 0, stopped = false, engine = Engine.ACCESSIBILITY)
+            pendingReport = CleanReport(cleaned = 1)
             refresh()
             return
         }
-        // As root, Shizuku clears one app without opening Settings; as shell, Android refuses.
-        if (ShizukuEngine.isReady(this) && ShizukuEngine.isRoot()) {
-            cleanSilently { ShizukuEngine.clearEach(this, listOf(app.packageName)) }
-            return
-        }
+        cleanFromReminder = false
         startCleaning(listOf(CleanTarget(app.packageName, app.label)), includeSelf = false, fallback = app)
-    }
-
-    /** Runs a Shizuku clean on the worker thread; [work] returns apps cleaned, or null on failure. */
-    private fun cleanSilently(work: () -> Int?) {
-        cleaningSilently = true
-        bytesBeforeClean = lastResult.totalBytes
-        setStatus(null)
-        showBusy(getString(R.string.cleaning))
-        clearOwnCache()
-        io.execute {
-            val cleaned = work()
-            runOnUiThread {
-                cleaningSilently = false
-                pendingReport = CleanReport(
-                    cleaned = cleaned ?: 0,
-                    failed = 0,
-                    stopped = false,
-                    engine = Engine.SHIZUKU,
-                    failedToRun = cleaned == null,
-                )
-                if (!isFinishing && !isDestroyed) refresh()
-            }
-        }
-    }
-
-    private fun showSilentProgress(done: Int, total: Int) {
-        runOnUiThread { summary.text = getString(R.string.cleaning_progress, done, total) }
     }
 
     private fun toggleSkipped(app: AppCache) {
         val skipped = prefs.toggleExcluded(app.packageName)
         setStatus(getString(if (skipped) R.string.skip_added else R.string.skip_removed, app.label))
         adapter.submit(lastResult.apps, prefs.excluded)
-        showEngine()
     }
 
     private fun startCleaning(targets: List<CleanTarget>, includeSelf: Boolean, fallback: AppCache? = null) {
@@ -307,9 +292,14 @@ class MainActivity : ThemedActivity() {
         }
         bytesBeforeClean = lastResult.totalBytes
         setStatus(null)
-        if (includeSelf) clearOwnCache()
+        selfCleaned = 0
+        if (includeSelf) {
+            if (lastResult.apps.any { it.packageName == packageName }) selfCleaned = 1
+            clearOwnCache()
+        }
         if (targets.isEmpty()) {
-            pendingReport = CleanReport(cleaned = 0, failed = 0, stopped = false, engine = Engine.ACCESSIBILITY)
+            pendingReport = CleanReport(cleaned = selfCleaned)
+            selfCleaned = 0
             refresh()
             return
         }
@@ -433,15 +423,22 @@ class MainActivity : ThemedActivity() {
 
     private data class CleanReport(
         val cleaned: Int,
-        val failed: Int,
-        val stopped: Boolean,
-        val engine: Engine,
-        val failedToRun: Boolean = false,
+        val failedNames: List<String> = emptyList(),
+        val stopped: Boolean = false,
+        val notReached: Int = 0,
     )
 
-    private companion object {
-        const val TYPE_HEADER = 0
-        const val TYPE_APP = 1
-        const val SKIPPED_ALPHA = 0.45f
+    companion object {
+        /** Set by the reminder notification: start Clean all after the scan. */
+        const val EXTRA_START_CLEAN = "start_clean"
+
+        private const val STATE_AUTO_CLEAN = "auto_clean"
+        private const val STATE_FROM_REMINDER = "from_reminder"
+        private const val STATE_BYTES_BEFORE = "bytes_before"
+        private const val STATE_SELF_CLEANED = "self_cleaned"
+
+        private const val TYPE_HEADER = 0
+        private const val TYPE_APP = 1
+        private const val SKIPPED_ALPHA = 0.45f
     }
 }

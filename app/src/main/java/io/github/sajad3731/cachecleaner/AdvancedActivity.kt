@@ -1,15 +1,19 @@
 package io.github.sajad3731.cachecleaner
 
+import android.Manifest
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import android.text.format.DateUtils
 import android.text.format.Formatter
 import android.view.View
 import android.widget.TextView
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.button.MaterialButtonToggleGroup
@@ -18,27 +22,24 @@ import com.google.android.material.chip.ChipGroup
 import com.google.android.material.color.DynamicColors
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.materialswitch.MaterialSwitch
-import rikka.shizuku.Shizuku
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
-/** Engine status, what Clean all skips, the schedule and the freed-space history. */
+/** Cleaning service state, appearance, what Clean all skips, the reminder and the history. */
 class AdvancedActivity : ThemedActivity() {
     private lateinit var prefs: Prefs
-    private lateinit var shizukuStatus: TextView
-    private lateinit var shizukuButton: MaterialButton
+    private lateinit var serviceStatus: TextView
+    private lateinit var serviceButton: MaterialButton
     private lateinit var skipAppsButton: MaterialButton
-    private lateinit var skipNote: TextView
     private lateinit var scheduleNote: TextView
     private lateinit var historyTotal: TextView
     private lateinit var historyList: TextView
 
     private val io: ExecutorService = Executors.newSingleThreadExecutor()
 
-    // Shizuku may call these off the main thread.
-    private val permissionListener = Shizuku.OnRequestPermissionResultListener { _, _ -> runOnUiThread(::showEngine) }
-    private val binderReceived = Shizuku.OnBinderReceivedListener { runOnUiThread(::showEngine) }
-    private val binderDead = Shizuku.OnBinderDeadListener { runOnUiThread(::showEngine) }
+    // The reminder is a notification: Android 13+ asks for it when the reminder is turned on.
+    private val notificationPermission =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { showReminderNote() }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -46,10 +47,9 @@ class AdvancedActivity : ThemedActivity() {
         prefs = Prefs(this)
         findViewById<MaterialToolbar>(R.id.toolbar).setNavigationOnClickListener { finish() }
 
-        shizukuStatus = findViewById(R.id.shizukuStatus)
-        shizukuButton = findViewById(R.id.shizukuButton)
+        serviceStatus = findViewById(R.id.serviceStatus)
+        serviceButton = findViewById(R.id.serviceButton)
         skipAppsButton = findViewById(R.id.skipAppsButton)
-        skipNote = findViewById(R.id.skipNote)
         scheduleNote = findViewById(R.id.scheduleNote)
         historyTotal = findViewById(R.id.historyTotal)
         historyList = findViewById(R.id.historyList)
@@ -63,72 +63,41 @@ class AdvancedActivity : ThemedActivity() {
             prefs.clearHistory()
             showHistory()
         }
-
-        Shizuku.addRequestPermissionResultListener(permissionListener)
-        Shizuku.addBinderReceivedListener(binderReceived)
-        Shizuku.addBinderDeadListener(binderDead)
+        serviceButton.setOnClickListener {
+            if (!tryStart(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))) {
+                serviceStatus.setText(R.string.settings_unavailable)
+            }
+        }
     }
 
     override fun onResume() {
         super.onResume()
-        // Shizuku may have been started or stopped, and a scheduled clean may have run.
-        ShizukuEngine.requestBinderIfMissing(this)
-        showEngine()
+        // The service or notifications may have been turned on or off in Settings.
+        showService()
+        showSkipped()
+        showReminderNote()
         showHistory()
     }
 
     override fun onDestroy() {
-        Shizuku.removeRequestPermissionResultListener(permissionListener)
-        Shizuku.removeBinderReceivedListener(binderReceived)
-        Shizuku.removeBinderDeadListener(binderDead)
         io.shutdownNow()
         super.onDestroy()
     }
 
-    private fun showEngine() {
-        if (isFinishing || isDestroyed) return
-        val state = ShizukuEngine.state(this)
-        val ready = state == ShizukuEngine.State.READY
-        val root = ready && ShizukuEngine.isRoot()
-        shizukuStatus.setText(
-            when (state) {
-                ShizukuEngine.State.NOT_INSTALLED -> R.string.shizuku_not_installed
-                ShizukuEngine.State.NOT_RUNNING -> R.string.shizuku_not_running
-                ShizukuEngine.State.NO_PERMISSION -> R.string.shizuku_no_permission
-                ShizukuEngine.State.READY -> if (root) R.string.shizuku_ready_root else R.string.shizuku_ready_adb
-            }
-        )
-        shizukuButton.visibility = if (ready) View.GONE else View.VISIBLE
-        when (state) {
-            ShizukuEngine.State.NOT_INSTALLED -> {
-                shizukuButton.setText(R.string.shizuku_get)
-                shizukuButton.setOnClickListener { getShizuku() }
-            }
-            ShizukuEngine.State.NOT_RUNNING -> {
-                shizukuButton.setText(R.string.shizuku_open)
-                shizukuButton.setOnClickListener { openShizuku() }
-            }
-            ShizukuEngine.State.NO_PERMISSION -> {
-                shizukuButton.setText(R.string.shizuku_allow)
-                shizukuButton.setOnClickListener { requestShizukuPermission() }
-            }
-            ShizukuEngine.State.READY -> shizukuButton.setOnClickListener(null)
-        }
+    private fun showService() {
+        val on = CacheCleanerService.isEnabled(this)
+        serviceStatus.setText(if (on) R.string.service_on else R.string.service_off)
+        serviceButton.visibility = if (on) View.GONE else View.VISIBLE
+    }
 
+    private fun showSkipped() {
         val skipped = prefs.excluded.size
         skipAppsButton.text = resources.getQuantityString(R.plurals.skip_apps_button, skipped, skipped)
-        skipNote.text = if (ready && !root && skipped > 0) {
-            getString(R.string.skip_note) + "\n\n" + getString(R.string.skip_note_adb)
-        } else {
-            getString(R.string.skip_note)
-        }
-        scheduleNote.setText(
-            when {
-                !ready -> R.string.schedule_note_needs_shizuku
-                root -> R.string.schedule_note_root
-                else -> R.string.schedule_note_adb
-            }
-        )
+    }
+
+    private fun showReminderNote() {
+        val blocked = prefs.schedule != Schedule.OFF && !ReminderJobService.canNotify(this)
+        scheduleNote.setText(if (blocked) R.string.schedule_note_blocked else R.string.schedule_note)
     }
 
     private fun setUpAppearance() {
@@ -180,7 +149,7 @@ class AdvancedActivity : ThemedActivity() {
         findViewById<Chip>(R.id.minSize50).text = getString(R.string.min_size_mb, 50)
         val group = findViewById<ChipGroup>(R.id.minSizeGroup)
         val current = prefs.minCleanBytes
-        group.check(options.firstOrNull { it.second == current }?.first ?: R.id.minSize1)
+        group.check(options.firstOrNull { it.second == current }?.first ?: R.id.minSizeAny)
         group.setOnCheckedStateChangeListener { _, ids ->
             options.firstOrNull { it.first == ids.firstOrNull() }?.let { prefs.minCleanBytes = it.second }
         }
@@ -193,21 +162,22 @@ class AdvancedActivity : ThemedActivity() {
             R.id.scheduleWeekly to Schedule.WEEKLY,
         )
         val group = findViewById<MaterialButtonToggleGroup>(R.id.scheduleGroup)
-        val charging = findViewById<MaterialSwitch>(R.id.chargingSwitch)
         group.check(options.first { it.second == prefs.schedule }.first)
-        charging.isChecked = prefs.chargingOnly
-        charging.isEnabled = prefs.schedule != Schedule.OFF
         group.addOnButtonCheckedListener { _, id, checked ->
             val schedule = options.firstOrNull { it.first == id }?.second
-            if (!checked || schedule == null) return@addOnButtonCheckedListener
+            if (!checked || schedule == null || schedule == prefs.schedule) return@addOnButtonCheckedListener
             prefs.schedule = schedule
-            charging.isEnabled = schedule != Schedule.OFF
-            CleanJobService.apply(this)
+            ReminderJobService.apply(this)
+            if (schedule == Schedule.OFF) ReminderJobService.cancel(this) else askForNotifications()
+            showReminderNote()
         }
-        charging.setOnCheckedChangeListener { _, checked ->
-            prefs.chargingOnly = checked
-            CleanJobService.apply(this)
-        }
+    }
+
+    private fun askForNotifications() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+        val granted = ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) ==
+            PackageManager.PERMISSION_GRANTED
+        if (!granted) notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
     }
 
     private fun chooseSkippedApps() {
@@ -232,7 +202,7 @@ class AdvancedActivity : ThemedActivity() {
             }
             .setPositiveButton(R.string.save) { _, _ ->
                 prefs.excluded = chosen
-                showEngine()
+                showSkipped()
             }
             .setNegativeButton(R.string.cancel, null)
             .show()
@@ -259,52 +229,11 @@ class AdvancedActivity : ThemedActivity() {
                 DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_SHOW_TIME or DateUtils.FORMAT_ABBREV_MONTH,
             )
         )
-        if (entry.scheduled) parts += getString(R.string.history_scheduled)
-        when (entry.outcome) {
-            Outcome.SKIPPED_NO_SHIZUKU -> parts += getString(R.string.history_skipped_no_shizuku)
-            Outcome.SKIPPED_EXCLUSIONS -> parts += getString(R.string.history_skipped_exclusions)
-            Outcome.FAILED -> parts += getString(R.string.history_failed)
-            Outcome.DONE, Outcome.STOPPED -> {
-                if (entry.freedBytes >= 0) parts += Formatter.formatFileSize(this, entry.freedBytes)
-                parts += if (entry.apps == HistoryEntry.ALL_APPS) {
-                    getString(R.string.history_all_apps)
-                } else {
-                    resources.getQuantityString(R.plurals.history_apps, entry.apps, entry.apps)
-                }
-                if (entry.outcome == Outcome.STOPPED) parts += getString(R.string.history_stopped)
-            }
-        }
-        parts += getString(
-            if (entry.engine == Engine.SHIZUKU) R.string.engine_shizuku else R.string.engine_accessibility
-        )
+        if (entry.freedBytes >= 0) parts += Formatter.formatFileSize(this, entry.freedBytes)
+        parts += resources.getQuantityString(R.plurals.history_apps, entry.apps, entry.apps)
+        if (entry.outcome == Outcome.STOPPED) parts += getString(R.string.history_stopped)
+        if (entry.fromReminder) parts += getString(R.string.history_from_reminder)
         return parts.joinToString(" · ")
-    }
-
-    private fun getShizuku() {
-        // Store first (Bazaar and Myket handle market links), then the project's download page.
-        val opened = tryStart(Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=${ShizukuEngine.PACKAGE}"))) ||
-            tryStart(Intent(Intent.ACTION_VIEW, Uri.parse(getString(R.string.shizuku_download_url))))
-        if (!opened) shizukuStatus.setText(R.string.settings_unavailable)
-    }
-
-    private fun openShizuku() {
-        val launch = packageManager.getLaunchIntentForPackage(ShizukuEngine.PACKAGE)
-        if (launch == null || !tryStart(launch)) shizukuStatus.setText(R.string.settings_unavailable)
-    }
-
-    private fun requestShizukuPermission() {
-        if (!Shizuku.pingBinder()) {
-            showEngine()
-            return
-        }
-        if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
-            showEngine()
-        } else if (Shizuku.shouldShowRequestPermissionRationale()) {
-            // Denied with "don't ask again": only the Shizuku app can grant it now.
-            shizukuStatus.setText(R.string.shizuku_denied)
-        } else {
-            Shizuku.requestPermission(ShizukuEngine.PERMISSION_REQUEST)
-        }
     }
 
     private fun showPrivacyPolicy() {

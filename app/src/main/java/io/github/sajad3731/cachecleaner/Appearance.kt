@@ -60,7 +60,7 @@ class App : Application() {
     override fun onCreate() {
         super.onCreate()
         Appearance.init(this)
-        CleanJobService.ensureScheduled(this)
+        ReminderJobService.ensureScheduled(this)
     }
 }
 

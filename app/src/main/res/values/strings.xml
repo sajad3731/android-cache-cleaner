@@ -23,7 +23,6 @@
     <string name="settings_unavailable">Could not open settings.</string>
     <string name="privacy_policy">Privacy policy</string>
     <string name="privacy_policy_title">Privacy policy</string>
-    <string name="privacy_policy_content">Cache Cleaner does not collect, transmit, or share personal data. It has no account, advertising, analytics, tracking, or internet permission. Its only library is Shizuku\'s open-source API, which talks to the Shizuku app on this device.\n\nUsage access lets Android report each installed app\'s cache size to Cache Cleaner. The app lists installed apps only to show those sizes.\n\nThe Accessibility service is used only to open each chosen app\'s Storage page in Settings and press Clear cache, while a cleaning you started is running. It does not read or keep any other screen content.\n\nIf you install Shizuku and allow Cache Cleaner in it, the app uses it only to run Android\'s own cache commands.\n\nAll of this happens on the device. Your settings and a history of cleanings stay on the device; nothing is sent anywhere.</string>
     <string name="view_online_policy">View online policy</string>
     <string name="close">Close</string>
     <string name="privacy_policy_url" translatable="false">https://github.com/sajad3731/android-cache-cleaner/blob/main/PRIVACY.md</string>
@@ -40,58 +39,26 @@
         <item quantity="one">Cleaned %1$d app.</item>
         <item quantity="other">Cleaned %1$d apps.</item>
     </plurals>
-    <plurals name="report_failed">
-        <item quantity="one">%1$d app was skipped.</item>
-        <item quantity="other">%1$d apps were skipped.</item>
-    </plurals>
     <string name="advanced">Advanced</string>
-    <string name="cleaning">Cleaning…</string>
-    <string name="cleaning_progress">Cleaning… %1$d of %2$d</string>
-    <string name="report_freed_all">Freed %1$s from all apps.</string>
-    <string name="shizuku_failed">Shizuku did not respond. Nothing was cleaned. Check that Shizuku is running.</string>
     <string name="size_skipped">%1$s · skipped by Clean all</string>
     <string name="skip_added">Clean all will skip %1$s.</string>
     <string name="skip_removed">Clean all will include %1$s again.</string>
-    <string name="section_engine">Cleaning engine</string>
-    <string name="shizuku_not_installed">Clean all uses the Accessibility engine: it opens each app\'s Storage page in Settings and presses Clear cache.\n\nWith Shizuku, Clean all frees every app\'s cache in seconds without opening Settings, and scheduled cleans become possible. Shizuku is a free app that you start once through Wireless debugging or root.</string>
-    <string name="shizuku_not_running">Shizuku is installed but not running. Start it in the Shizuku app through Wireless debugging or root, then come back.</string>
-    <string name="shizuku_no_permission">Shizuku is running. Allow Cache Cleaner to use it.</string>
-    <string name="shizuku_denied">Shizuku permission was denied. Allow Cache Cleaner in the Shizuku app, under Authorized applications.</string>
-    <string name="shizuku_ready_adb">Shizuku is ready (adb). Clean all frees every app\'s cache at once, in seconds, without opening Settings.\n\nThrough adb, Android does not allow clearing one app at a time, so Clear buttons use the Accessibility engine.</string>
-    <string name="shizuku_ready_root">Shizuku is ready (root). Clean all and each Clear button work in the background, app by app, without opening Settings.</string>
-    <string name="shizuku_get">Get Shizuku</string>
-    <string name="shizuku_open">Open Shizuku</string>
-    <string name="shizuku_allow">Allow</string>
-    <string name="shizuku_download_url" translatable="false">https://shizuku.rikka.app/download/</string>
     <string name="section_skip">What Clean all skips</string>
     <string name="min_size_label">Skip caches smaller than:</string>
     <string name="min_size_any">Clean every size</string>
     <string name="min_size_mb">%1$d MB</string>
     <string name="skip_note">You can also long-press an app on the main screen to skip it or include it again.</string>
-    <string name="skip_note_adb">Shizuku through adb can only clean all apps together. While a skipped app holds cache, Clean all uses the Accessibility engine so that app stays untouched.</string>
     <string name="skip_dialog_title">Apps to skip</string>
     <string name="save">Save</string>
     <string name="cancel">Cancel</string>
-    <string name="section_schedule">Scheduled clean</string>
     <string name="schedule_off">Off</string>
     <string name="schedule_daily">Every day</string>
     <string name="schedule_weekly">Every week</string>
-    <string name="schedule_charging">Only while charging</string>
-    <string name="schedule_note_needs_shizuku">Scheduled cleans run in the background, so they need Shizuku. Until Shizuku is ready, each scheduled run is skipped and noted in the history.</string>
-    <string name="schedule_note_adb">Runs in the background through Shizuku and frees every app\'s cache. A run is skipped while a skipped app holds cache.</string>
-    <string name="schedule_note_root">Runs in the background through Shizuku, app by app, and respects the apps and sizes you skip.</string>
     <string name="section_history">History</string>
     <string name="history_empty">No cleanings yet.</string>
     <string name="history_total">%1$s freed in total</string>
     <string name="history_clear">Clear history</string>
-    <string name="history_scheduled">Scheduled</string>
-    <string name="history_all_apps">all apps</string>
     <string name="history_stopped">stopped</string>
-    <string name="history_failed">Shizuku did not respond</string>
-    <string name="history_skipped_no_shizuku">Skipped: Shizuku not running</string>
-    <string name="history_skipped_exclusions">Skipped: a skipped app held cache</string>
-    <string name="engine_shizuku">Shizuku</string>
-    <string name="engine_accessibility">Accessibility</string>
     <plurals name="skip_apps_button">
         <item quantity="one">Apps to skip (%1$d)</item>
         <item quantity="other">Apps to skip (%1$d)</item>
@@ -102,9 +69,6 @@
     </plurals>
     <string name="cache_found">Cache found</string>
     <string name="apps_header">Apps with cache</string>
-    <string name="engine_chip_accessibility">Engine: Accessibility</string>
-    <string name="engine_chip_shizuku_adb">Engine: Shizuku (adb)</string>
-    <string name="engine_chip_shizuku_root">Engine: Shizuku (root)</string>
     <string name="back">Back</string>
     <string name="section_appearance">Appearance</string>
     <string name="theme_label">Theme</string>
@@ -116,6 +80,62 @@
     <string name="dynamic_color">Wallpaper colors</string>
     <string name="dynamic_color_summary">Use colors from your wallpaper instead of the app\'s teal.</string>
     <string name="section_about">About</string>
-    <string name="engine_chip_accessibility_skipped">Engine: Accessibility (skipped app)</string>
     <string name="service_starting">The cleaning service is starting. Try again in a few seconds.</string>
+    <plurals name="report_not_reached">
+        <item quantity="one">%1$d app was not reached.</item>
+        <item quantity="other">%1$d apps were not reached.</item>
+    </plurals>
+    <plurals name="report_failed">
+        <item quantity="one">%1$d app was skipped: %2$s.</item>
+        <item quantity="other">%1$d apps were skipped: %2$s.</item>
+    </plurals>
+    <string name="list_separator">", "</string>
+    <string name="privacy_policy_content">Cache Cleaner does not collect, transmit, or share personal data. It has no account, advertising, analytics, tracking, or internet permission.\n\nUsage access lets Android report each installed app\'s cache size to Cache Cleaner. The app lists installed apps only to show those sizes.\n\nThe Accessibility service is used only to open each chosen app\'s Storage page in Settings and press Clear cache, while a cleaning you started is running. It does not read or keep any other screen content.\n\nAll files access is used only by Junk files, to find and delete the leftovers you choose on the phone\'s shared storage. File names are shown on the screen and never leave the device.\n\nNotifications are used only for the cleaning reminder, if you turn it on.\n\nAll of this happens on the device. Your settings and a history of cleanings stay on the device; nothing is sent anywhere.</string>
+    <string name="section_service">One-tap cleaning</string>
+    <string name="service_on">On. Clean all opens each app\'s Storage page in Settings and presses Clear cache for you.</string>
+    <string name="service_off">Off. Turn on Cache Cleaner in Accessibility settings so Clean all can press Clear cache for you.</string>
+    <string name="section_schedule">Cleaning reminder</string>
+    <string name="schedule_note">Checks the cache in the background and, when there is at least 50 MB to clean, sends a notification. Tap it to clean. Nothing is cleaned without you.</string>
+    <string name="schedule_note_blocked">Notifications are off for Cache Cleaner, so the reminder cannot appear. Allow notifications in the app\'s settings.</string>
+    <string name="history_from_reminder">from reminder</string>
+    <string name="reminder_channel">Cleaning reminder</string>
+    <string name="reminder_channel_description">Tells you when apps hold enough cache to clean.</string>
+    <string name="reminder_title">%1$s of cache to clean</string>
+    <string name="reminder_text">Tap to clean all apps.</string>
+    <string name="junk_title">Junk files</string>
+    <string name="junk_card_summary">Leftover folders, installers, empty folders and more</string>
+    <string name="junk_selected">Selected to delete</string>
+    <string name="junk_need_access">To find junk files on your phone\'s storage, Cache Cleaner needs All files access. It only looks for leftovers, and deletes only what you choose.</string>
+    <string name="junk_allow_access">Allow all files access</string>
+    <string name="junk_scanning">Looking for junk files…</string>
+    <string name="junk_deleting">Deleting…</string>
+    <string name="junk_nothing_found">No junk files found.</string>
+    <string name="junk_summary">%1$s selected, %2$s found in total.</string>
+    <string name="junk_delete">Delete selected</string>
+    <string name="junk_confirm_title">Delete junk files?</string>
+    <plurals name="junk_confirm_message">
+        <item quantity="one">%1$d item (%2$s) will be deleted. Deleted files cannot be restored.</item>
+        <item quantity="other">%1$d items (%2$s) will be deleted. Deleted files cannot be restored.</item>
+    </plurals>
+    <string name="junk_freed">Freed %1$s.</string>
+    <plurals name="junk_failed">
+        <item quantity="one">%1$d item could not be deleted.</item>
+        <item quantity="other">%1$d items could not be deleted.</item>
+    </plurals>
+    <plurals name="junk_items">
+        <item quantity="one">%1$d item</item>
+        <item quantity="other">%1$d items</item>
+    </plurals>
+    <string name="junk_select_group">Select all of %1$s</string>
+    <string name="junk_select_item">Select %1$s</string>
+    <string name="junk_group_leftovers">Leftovers of removed apps</string>
+    <string name="junk_group_leftovers_summary">Folders named after apps that are no longer installed.</string>
+    <string name="junk_group_apks">App installers</string>
+    <string name="junk_group_apks_summary">APK files. Apps you installed from them stay installed.</string>
+    <string name="junk_group_thumbnails">Thumbnail caches</string>
+    <string name="junk_group_thumbnails_summary">Small previews of photos and videos. Android makes them again when needed.</string>
+    <string name="junk_group_empty">Empty folders</string>
+    <string name="junk_group_empty_summary">Folders with no files in them.</string>
+    <string name="junk_group_downloads">Old large downloads</string>
+    <string name="junk_group_downloads_summary">Files in Download of at least %1$s, unchanged for %2$d days. Check them before deleting.</string>
 </resources>

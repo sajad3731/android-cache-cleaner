@@ -14,7 +14,8 @@ import java.io.IOException
 data class AppCache(
     val packageName: String,
     val label: String,
-    val icon: Drawable,
+    /** Null when the scan skipped icons (the reminder only sums sizes). */
+    val icon: Drawable?,
     val cacheBytes: Long,
 )
 
@@ -47,7 +48,7 @@ class CacheScanner(private val context: Context) {
         return mode == AppOpsManager.MODE_ALLOWED
     }
 
-    fun scan(): ScanResult {
+    fun scan(withIcons: Boolean = true): ScanResult {
         val user = Process.myUserHandle()
         val apps = installedApps().mapNotNull { info ->
             val cacheBytes = try {
@@ -59,12 +60,15 @@ class CacheScanner(private val context: Context) {
                 return@mapNotNull null
             } catch (ignored: IOException) {
                 return@mapNotNull null
+            } catch (ignored: SecurityException) {
+                // Usage access revoked mid-scan, or a package the system will not report on.
+                return@mapNotNull null
             }
             if (cacheBytes <= 0L) return@mapNotNull null
             AppCache(
                 packageName = info.packageName,
                 label = info.loadLabel(packageManager).toString(),
-                icon = info.loadIcon(packageManager),
+                icon = if (withIcons) info.loadIcon(packageManager) else null,
                 cacheBytes = cacheBytes,
             )
         }

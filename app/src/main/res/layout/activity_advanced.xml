@@ -51,15 +51,16 @@
 
                 <TextView
                     style="@style/SectionTitle"
-                    android:text="@string/section_engine" />
+                    android:text="@string/section_service" />
 
                 <TextView
-                    android:id="@+id/shizukuStatus"
+                    android:id="@+id/serviceStatus"
                     style="@style/Body"
                     android:accessibilityLiveRegion="polite" />
 
                 <com.google.android.material.button.MaterialButton
-                    android:id="@+id/shizukuButton"
+                    android:id="@+id/serviceButton"
+                    android:text="@string/enable_turn_on"
                     style="@style/Widget.Material3Expressive.Button"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -203,8 +204,8 @@
                     android:layout_marginTop="12dp" />
 
                 <TextView
-                    android:id="@+id/skipNote"
-                    style="@style/Note" />
+                    style="@style/Note"
+                    android:text="@string/skip_note" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -250,15 +251,6 @@
                         android:layout_weight="1"
                         android:text="@string/schedule_weekly" />
                 </com.google.android.material.button.MaterialButtonToggleGroup>
-                <com.google.android.material.materialswitch.MaterialSwitch
-                    android:id="@+id/chargingSwitch"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:minHeight="48dp"
-                    android:text="@string/schedule_charging"
-                    android:textAppearance="?attr/textAppearanceBodyLarge" />
-
                 <TextView
                     android:id="@+id/scheduleNote"
                     style="@style/Note" />

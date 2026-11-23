@@ -45,11 +45,6 @@ android {
         }
     }
 
-    buildFeatures {
-        // IShellService: the app's link to the process Shizuku runs for it.
-        aidl = true
-    }
-
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -65,7 +60,4 @@ kotlin {
 dependencies {
     // Material 3 components, dynamic color and the DayNight theme.
     implementation("com.google.android.material:material:1.14.0")
-    // Shizuku runs a helper process as shell (or root), which may trim every app's cache.
-    implementation("dev.rikka.shizuku:api:13.1.5")
-    implementation("dev.rikka.shizuku:provider:13.1.5")
 }
